@@ -1,0 +1,52 @@
+Hello Prashant GR
+
+Follow the below POA
+
+master		slave
+192.168.11.62	192.168.11.63
+192.168.11.64	192.168.11.65
+192.168.11.66	192.168.11.67
+192.168.11.68	192.168.11.69
+192.168.11.70	192.168.11.71
+
+Step1.
+
+Change pointing from mysql on 192.168.6.75
+select * from webporting_process_log.EnableRedisWebsite;
+Update webporting_process_log.EnableRedisWebsite set value=0;
+
+Confirm value to zero
+select * from webporting_process_log.EnableRedisWebsite;
+
+
+Stop running redis service on main host and docker on all servers after 2 minutes 
+Mount 1TB on /var/lib/redis
+Take backup cp -arp /etc/redis.conf /etc/redis.conf_old
+
+unInstall redis packages and reinstall new one 
+https://rpmfind.net/linux/remi/enterprise/7/remi/x86_64/redis-7.0.12-1.el7.remi.x86_64.rpm
+
+Place redis.conf and sysctl.conf from 192.168.11.70 to all servers 
+
+Redis log must be rotate in 00 am with anacrond 
+
+Step2.
+
+Start redis service on all servers and confirm ping pong to all servers
+
+Create master first from any server
+redis-cli  --cluster create 192.168.11.62:6379 192.168.11.64:6379 192.168.11.66:6379 192.168.11.68:6379 192.168.11.70:6379
+
+
+# Add slave nodes into cluster as per master slave strategy steps 1
+Connect redis on master server and add all slaves 
+redis-cli -h 192.168.xx.1 -p 6379
+192.168.xx.1:6379> meet	NEWIP/SLAVEIP PORT 
+192.168.xx.1:6379> cluster nodes             ( note-down master-server-node-id )
+192.168.xx.1:6379>exit
+
+Connect redis on slave server one by one and issue below commands 
+redis-cli -h 192.168.xx.2 -p 6379
+192.168.xx.2:6379>cluster replicate <master-server-node-id>
+
+Repeat the step for remaining  new slave to adding 
